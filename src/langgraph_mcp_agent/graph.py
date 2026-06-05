@@ -1,0 +1,69 @@
+"""The LangGraph agent: a ReAct loop built as an explicit StateGraph.
+
+Topology:
+
+    START -> model -> (tools_condition) -> tools -> model -> ... -> END
+
+`model` calls the LLM (bound to the tools); `tools_condition` routes to the
+`tools` node whenever the model emits tool calls, otherwise to END. The `tools`
+node executes the calls and feeds results back to `model`. This is the canonical
+tool-calling agent, written out as a graph so every step is inspectable.
+"""
+from __future__ import annotations
+
+from langchain_core.tools import tool as as_tool
+from langgraph.graph import START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
+
+from langgraph_mcp_agent import tools as impl
+
+
+# LangChain tool wrappers around the shared pure functions. These are the
+# fallback tools used when the agent is NOT loading tools from the MCP server
+# (e.g. in the hermetic unit tests).
+@as_tool
+def add(a: float, b: float) -> float:
+    """Add two numbers and return the sum."""
+    return impl.add(a, b)
+
+
+@as_tool
+def multiply(a: float, b: float) -> float:
+    """Multiply two numbers and return the product."""
+    return impl.multiply(a, b)
+
+
+@as_tool
+def search_notes(query: str) -> str:
+    """Search the built-in knowledge base and return the most relevant note."""
+    return impl.search_notes(query)
+
+
+LOCAL_TOOLS = [add, multiply, search_notes]
+
+
+def build_agent(model, tools=None):
+    """Compile a ReAct agent graph.
+
+    Args:
+        model: a LangChain chat model that supports ``bind_tools``.
+        tools: optional list of LangChain tools. Defaults to the local wrappers;
+            pass MCP-loaded tools (see ``mcp_client.load_mcp_tools``) to run the
+            agent against the MCP server.
+
+    Returns:
+        A compiled LangGraph graph with ``.invoke`` / ``.ainvoke``.
+    """
+    tools = tools or LOCAL_TOOLS
+    model_with_tools = model.bind_tools(tools)
+
+    def call_model(state: MessagesState):
+        return {"messages": [model_with_tools.invoke(state["messages"])]}
+
+    graph = StateGraph(MessagesState)
+    graph.add_node("model", call_model)
+    graph.add_node("tools", ToolNode(tools))
+    graph.add_edge(START, "model")
+    graph.add_conditional_edges("model", tools_condition)
+    graph.add_edge("tools", "model")
+    return graph.compile()
