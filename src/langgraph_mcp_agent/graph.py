@@ -42,7 +42,7 @@ def search_notes(query: str) -> str:
 LOCAL_TOOLS = [add, multiply, search_notes]
 
 
-def build_agent(model, tools=None):
+def build_agent(model, tools=None, checkpointer=None):
     """Compile a ReAct agent graph.
 
     Args:
@@ -50,6 +50,10 @@ def build_agent(model, tools=None):
         tools: optional list of LangChain tools. Defaults to the local wrappers;
             pass MCP-loaded tools (see ``mcp_client.load_mcp_tools``) to run the
             agent against the MCP server.
+        checkpointer: optional LangGraph checkpointer (e.g. ``MemorySaver``) to
+            persist conversation state. When provided, invoke with a
+            ``{"configurable": {"thread_id": ...}}`` config and the agent
+            remembers prior turns on that thread (multi-turn memory).
 
     Returns:
         A compiled LangGraph graph with ``.invoke`` / ``.ainvoke``.
@@ -66,4 +70,4 @@ def build_agent(model, tools=None):
     graph.add_edge(START, "model")
     graph.add_conditional_edges("model", tools_condition)
     graph.add_edge("tools", "model")
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
