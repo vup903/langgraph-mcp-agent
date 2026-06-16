@@ -11,6 +11,7 @@ tool-calling agent, written out as a graph so every step is inspectable.
 """
 from __future__ import annotations
 
+from langchain_core.messages import SystemMessage
 from langchain_core.tools import tool as as_tool
 from langgraph.graph import START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -42,7 +43,7 @@ def search_notes(query: str) -> str:
 LOCAL_TOOLS = [add, multiply, search_notes]
 
 
-def build_agent(model, tools=None, checkpointer=None):
+def build_agent(model, tools=None, checkpointer=None, system_prompt=None):
     """Compile a ReAct agent graph.
 
     Args:
@@ -54,6 +55,8 @@ def build_agent(model, tools=None, checkpointer=None):
             persist conversation state. When provided, invoke with a
             ``{"configurable": {"thread_id": ...}}`` config and the agent
             remembers prior turns on that thread (multi-turn memory).
+        system_prompt: optional instruction prepended (as a SystemMessage) to
+            the messages sent to the model on each step, to steer its behavior.
 
     Returns:
         A compiled LangGraph graph with ``.invoke`` / ``.ainvoke``.
@@ -62,7 +65,10 @@ def build_agent(model, tools=None, checkpointer=None):
     model_with_tools = model.bind_tools(tools)
 
     def call_model(state: MessagesState):
-        return {"messages": [model_with_tools.invoke(state["messages"])]}
+        messages = state["messages"]
+        if system_prompt and not (messages and messages[0].type == "system"):
+            messages = [SystemMessage(system_prompt), *messages]
+        return {"messages": [model_with_tools.invoke(messages)]}
 
     graph = StateGraph(MessagesState)
     graph.add_node("model", call_model)
