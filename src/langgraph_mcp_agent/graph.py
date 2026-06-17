@@ -49,6 +49,14 @@ def list_topics() -> str:
 LOCAL_TOOLS = [add, multiply, search_notes, list_topics]
 
 
+def _on_tool_error(exc: Exception) -> str:
+    """Turn a tool exception into a message the model can recover from."""
+    return (
+        f"Tool error: {exc}. Do not retry blindly — continue without this tool's "
+        "result and tell the user the tool failed."
+    )
+
+
 def build_agent(model, tools=None, checkpointer=None, system_prompt=None):
     """Compile a ReAct agent graph.
 
@@ -78,7 +86,7 @@ def build_agent(model, tools=None, checkpointer=None, system_prompt=None):
 
     graph = StateGraph(MessagesState)
     graph.add_node("model", call_model)
-    graph.add_node("tools", ToolNode(tools))
+    graph.add_node("tools", ToolNode(tools, handle_tool_errors=_on_tool_error))
     graph.add_edge(START, "model")
     graph.add_conditional_edges("model", tools_condition)
     graph.add_edge("tools", "model")
