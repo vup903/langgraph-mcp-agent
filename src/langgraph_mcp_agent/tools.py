@@ -23,6 +23,11 @@ NOTES: dict[str, str] = {
 }
 
 
+def list_topics() -> str:
+    """List the topics available in the built-in knowledge base."""
+    return "Available topics: " + ", ".join(sorted(NOTES.keys()))
+
+
 def add(a: float, b: float) -> float:
     """Return the sum of two numbers."""
     return a + b

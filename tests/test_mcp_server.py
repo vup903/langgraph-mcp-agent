@@ -20,7 +20,7 @@ def _result_text(result) -> str:
 def test_server_lists_all_tools():
     listed = asyncio.run(mcp.list_tools())
     names = {t.name for t in listed}
-    assert {"add", "multiply", "search_notes"} <= names
+    assert {"add", "multiply", "search_notes", "list_topics"} <= names
     # every tool advertises a description (good MCP hygiene)
     assert all(t.description for t in listed)
 
@@ -33,3 +33,8 @@ def test_call_add_over_mcp():
 def test_call_search_notes_over_mcp():
     text = _result_text(asyncio.run(mcp.call_tool("search_notes", {"query": "mcp"})))
     assert "Model Context Protocol" in text
+
+
+def test_call_list_topics_over_mcp():
+    text = _result_text(asyncio.run(mcp.call_tool("list_topics", {})))
+    assert "mcp" in text and "rag" in text

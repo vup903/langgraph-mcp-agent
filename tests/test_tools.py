@@ -19,3 +19,8 @@ def test_search_notes_token_overlap():
 
 def test_search_notes_miss():
     assert tools.search_notes("zzzz") == "No matching note found."
+
+
+def test_list_topics():
+    topics = tools.list_topics()
+    assert "mcp" in topics and "rag" in topics and "langgraph" in topics

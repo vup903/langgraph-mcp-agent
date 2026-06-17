@@ -34,6 +34,12 @@ def search_notes(query: str) -> str:
     return tools.search_notes(query)
 
 
+@mcp.tool()
+def list_topics() -> str:
+    """List the topics available in the built-in knowledge base."""
+    return tools.list_topics()
+
+
 def main() -> None:
     mcp.run(transport="stdio")
 

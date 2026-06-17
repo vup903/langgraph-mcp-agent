@@ -40,7 +40,13 @@ def search_notes(query: str) -> str:
     return impl.search_notes(query)
 
 
-LOCAL_TOOLS = [add, multiply, search_notes]
+@as_tool
+def list_topics() -> str:
+    """List the topics available in the built-in knowledge base."""
+    return impl.list_topics()
+
+
+LOCAL_TOOLS = [add, multiply, search_notes, list_topics]
 
 
 def build_agent(model, tools=None, checkpointer=None, system_prompt=None):
