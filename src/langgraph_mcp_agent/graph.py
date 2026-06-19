@@ -91,3 +91,14 @@ def build_agent(model, tools=None, checkpointer=None, system_prompt=None):
     graph.add_conditional_edges("model", tools_condition)
     graph.add_edge("tools", "model")
     return graph.compile(checkpointer=checkpointer)
+
+
+def stream_steps(agent, messages, config=None):
+    """Yield ``(node_name, state_update)`` for each step as the agent runs.
+
+    Surfaces intermediate reasoning/tool steps in real time (e.g. for a UI or a
+    progress log) instead of blocking on the final answer.
+    """
+    for chunk in agent.stream({"messages": messages}, config, stream_mode="updates"):
+        for node, update in chunk.items():
+            yield node, update
