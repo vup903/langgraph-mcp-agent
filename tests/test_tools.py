@@ -21,6 +21,14 @@ def test_search_notes_miss():
     assert tools.search_notes("zzzz") == "No matching note found."
 
 
+def test_search_notes_ranks_by_overlap():
+    # "standard" hits only the mcp note (1 token); "retrieved"+"documents" hit
+    # the rag note (2 tokens). The old "first overlap wins" logic returned mcp
+    # because it comes first; ranking by overlap correctly returns rag instead.
+    result = tools.search_notes("standard retrieved documents")
+    assert "Retrieval-Augmented" in result
+
+
 def test_list_topics():
     topics = tools.list_topics()
     assert "mcp" in topics and "rag" in topics and "langgraph" in topics

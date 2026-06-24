@@ -43,13 +43,17 @@ def search_notes(query: str) -> str:
     q = query.lower().strip()
     if not q:
         return "No matching note found."
-    # Prefer a direct key hit, then fall back to token overlap with note text.
+    # Prefer a direct key hit (most precise).
     for key, text in NOTES.items():
         if key in q:
             return text
-    tokens = [t for t in q.split() if len(t) > 2]
+    # Otherwise rank notes by how many distinct query tokens they contain and
+    # return the most relevant one (ties broken by insertion order).
+    tokens = {t for t in q.split() if len(t) > 2}
+    best_text, best_score = None, 0
     for text in NOTES.values():
         lowered = text.lower()
-        if any(tok in lowered for tok in tokens):
-            return text
-    return "No matching note found."
+        score = sum(1 for tok in tokens if tok in lowered)
+        if score > best_score:
+            best_text, best_score = text, score
+    return best_text if best_text is not None else "No matching note found."
